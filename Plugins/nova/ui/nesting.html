@@ -1,0 +1,62 @@
+<!doctype html><meta charset="utf-8"><title>Nova Nesting</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;height:100vh;display:flex;flex-direction:column;background:#1e1e1e;color:#ddd;font:12px sans-serif}
+  #top{display:flex;gap:18px;padding:6px 12px;background:#262626;border-bottom:1px solid #111}
+  #top button{background:none;border:0;color:#ddd;cursor:pointer;font-size:11px;padding:4px 8px}
+  #top button:hover{color:#f2a900}
+  #logo{font-weight:800;font-size:18px;color:#fff;margin-right:12px}
+  #main{flex:1;display:flex;min-height:0}
+  #list{width:210px;overflow:auto;background:#2a2a2a;border-right:1px solid #111}
+  #tabs{display:flex;background:#2a2a2a;border-bottom:1px solid #111}
+  #tabs span{padding:6px 14px;cursor:pointer}#tabs .on{color:#f2a900;border-bottom:2px solid #f2a900}
+  .grp{padding:6px 8px;font-size:11px;color:#bbb}
+  .card{margin:6px;border:2px solid transparent;cursor:pointer;background:#1b1b1b;position:relative}
+  .card.sel{border-color:#f2a900}
+  .card canvas{width:100%;display:block}
+  .num{position:absolute;left:4px;top:30%;background:#1b1b1b;color:#f2a900;border:2px solid #f2a900;
+       border-radius:8px;padding:0 4px;font-weight:700}
+  .meta{font-size:10px;padding:3px 6px;background:#3a3a3a}
+  #view{flex:1;display:flex;align-items:center;justify-content:center;background:#222}
+  #total{padding:4px 10px;background:#1b1b1b;color:#f2a900;font-weight:700;border-top:1px solid #111}
+</style>
+<div id="top"><span id="logo">NOVA</span>
+  <button>New</button><button>Open</button><button>Save</button><button>Import</button>
+  <button>▶ Start</button><button>■ Stop</button><button>Clean up</button>
+  <button>Export DXF</button><button>Export CNC</button><button>Export Saw</button></div>
+<div id="main">
+  <div><div id="tabs"><span class="on">Layout scheme list</span><span>Information</span></div><div id="list"></div></div>
+  <div id="view"><canvas id="big"></canvas></div>
+</div>
+<div id="total"></div>
+<script>
+const Nova={sheets:[],sel:0,
+ load(d){this.d=d;this.sheets=pack(d);this.render();},
+ render(){
+  const list=document.getElementById('list');list.innerHTML='';
+  this.sheets.forEach((s,i)=>{
+    const c=document.createElement('div');c.className='card'+(i==this.sel?' sel':'');
+    const cv=document.createElement('canvas');draw(cv,s,this.d.board,200);
+    c.innerHTML='<div class="num">#'+(i+1)+'</div>';c.prepend(cv);
+    c.insertAdjacentHTML('beforeend','<div class="meta">'+this.d.board[0]+'.0×'+this.d.board[1]+'.00 Rate:'+s.rate+'% Count:1</div>');
+    c.onclick=()=>{this.sel=i;this.render()};list.appendChild(c);});
+  draw(document.getElementById('big'),this.sheets[this.sel],this.d.board,700);
+  document.getElementById('total').textContent='Total:'+this.sheets.length+'P@Available';}};
+function pack(d){ // shelf packer
+  const [W,H]=d.board,sheets=[];let s=null,x=0,y=0,rowH=0;
+  const parts=[...d.parts].sort((a,b)=>b.h-a.h);
+  const fresh=()=>{s={parts:[],used:0};sheets.push(s);x=y=rowH=0};
+  parts.forEach(p=>{ if(!s)fresh();
+    if(x+p.w>W){x=0;y+=rowH;rowH=0}
+    if(y+p.h>H){fresh()}
+    s.parts.push({x,y,w:p.w,h:p.h});s.used+=p.w*p.h;x+=p.w;rowH=Math.max(rowH,p.h);});
+  sheets.forEach(s=>s.rate=(100*s.used/(W*H)).toFixed(2));return sheets;}
+function draw(cv,s,[W,H],px){
+  if(!s){return}
+  const k=px/W;cv.width=px;cv.height=H*k;const g=cv.getContext('2d');
+  g.fillStyle='#c8651f';g.fillRect(0,0,cv.width,cv.height);
+  s.parts.forEach(p=>{g.fillStyle='#2d5f5a';g.fillRect(p.x*k,p.y*k,p.w*k,p.h*k);
+    g.strokeStyle='#cfe';g.lineWidth=1;g.strokeRect(p.x*k,p.y*k,p.w*k,p.h*k)});}
+window.addEventListener('load',()=>window.sketchup?window.sketchup.ready():Nova.load(
+ {board:[2440,1300],parts:Array.from({length:14},(_,i)=>({w:600+i*40,h:300+(i%4)*120}))}));
+</script>

@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>QuickToolBar</title>
+<style>
+  body{margin:0;background:#f4f4f4;font:12px sans-serif;overflow:hidden}
+  #ring{position:relative;width:420px;height:420px}
+  .btn{position:absolute;width:38px;height:38px;margin:-19px;border-radius:50%;border:2px solid #c9ced8;
+       background:#fff;color:#3b5fc0;font-weight:700;cursor:pointer;box-shadow:0 1px 3px #0003;font-size:15px}
+  .btn:hover{background:#e6edff;border-color:#3b5fc0}
+  #c{position:absolute;left:210px;top:210px;color:#d22;font-size:14px;transform:translate(-50%,-50%);pointer-events:none}
+</style>
+<div id="ring"><div id="c">QuickToolBar</div></div>
+<script>
+const tools=[['grain','纹','Grain matching'],['door','门','Doors'],['nesting','P','Nesting'],
+ ['check','检','Check'],['settings','⚙','Settings'],['quick','Q','Quick'],
+ ['grain','1','Grain 1'],['door','2','Doors 2'],['nesting','3','Nesting 3'],['check','4','Check 4'],
+ ['settings','5','Settings 5'],['quick','6','Quick 6'],['grain','7','Grain 7'],['door','8','Doors 8'],
+ ['nesting','9','Nesting 9'],['check','外','Outer']];
+const ring=document.getElementById('ring');
+const rings=[[6,70],[10,125],[0,0]];let i=0;
+rings.forEach(([n,r])=>{for(let k=0;k<n&&i<tools.length;k++,i++){
+  const a=2*Math.PI*k/n-Math.PI/2,[id,ch,tip]=tools[i],b=document.createElement('button');
+  b.className='btn';b.textContent=ch;b.title=tip;
+  b.style.left=(210+r*Math.cos(a))+'px';b.style.top=(210+r*Math.sin(a))+'px';
+  b.onclick=()=>window.sketchup.run(id);ring.appendChild(b);}});
+</script>
