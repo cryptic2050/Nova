@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>Nova Labels</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;font:12px "Segoe UI",sans-serif;background:#555;color:#222}
+  #bar{padding:8px;background:#f1f1f1;display:flex;gap:10px;align-items:center;position:sticky;top:0}
+  button{background:#2f6fdb;color:#fff;border:0;border-radius:4px;padding:6px 12px;cursor:pointer}
+  #sheet{display:flex;flex-wrap:wrap;gap:10px;padding:12px}
+  .lbl{width:230px;background:#fff;padding:8px;display:flex;gap:8px;border:1px solid #999}
+  .lbl .id{font-size:30px;font-weight:700;line-height:1}.lbl .qr{width:80px;height:80px;flex:none}
+  .lbl small{display:block;color:#444}
+  @media print{body{background:#fff}#bar{display:none}.lbl{break-inside:avoid}}
+</style>
+<div id="bar"><button onclick="print()">Print</button><span id="n"></span></div><div id="sheet"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const Nova={load(items){
+ const s=document.getElementById('sheet');s.innerHTML='';document.getElementById('n').textContent=items.length+' labels';
+ items.forEach(i=>{const d=document.createElement('div');d.className='lbl';
+  d.innerHTML='<div class="qr"></div><div><div class="id">'+i.id+'</div><b>'+i.part+'</b><small>'+i.cabinet+'</small><small>'+i.dims+' mm</small><small>'+i.material+' · edge: '+i.edge+'</small></div>';
+  s.appendChild(d);const q=d.querySelector('.qr');
+  if(window.QRCode)new QRCode(q,{text:i.qr,width:80,height:80});else q.textContent='QR';});}};
+window.addEventListener('load',()=>{if(window.sketchup)sketchup.ready()});
+</script>

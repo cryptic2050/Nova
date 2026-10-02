@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><title>Nova Cabinets</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;height:100vh;display:flex;font:12px "Segoe UI",sans-serif;color:#222;background:#fff}
+  #lib{flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid #ccc}
+  #tabs{display:flex;background:#f1f1f1;border-bottom:1px solid #ccc}
+  #tabs span{padding:8px 14px;cursor:pointer}#tabs .on{background:#fff;border-bottom:2px solid #2f6fdb;font-weight:600}
+  #grid{flex:1;overflow:auto;padding:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;align-content:start}
+  .card{border:1px solid #ddd;border-radius:6px;padding:6px;text-align:center;cursor:pointer;background:#fafafa}
+  .card:hover{border-color:#2f6fdb}.card.sel{border-color:#2f6fdb;box-shadow:0 0 0 2px #2f6fdb55}
+  .card svg{width:100%;height:110px}
+  #form{width:300px;overflow:auto;padding:10px 12px}
+  h3{margin:0 0 8px;font-size:13px}
+  .row{display:flex;align-items:center;margin:4px 0}.row label{flex:1;color:#444}
+  .row input,.row select{width:110px;padding:3px;border:1px solid #bbb;border-radius:3px}
+  .sep{margin:10px 0 4px;font-weight:600;border-top:1px solid #ddd;padding-top:8px}
+  button{background:#2f6fdb;color:#fff;border:0;border-radius:4px;padding:7px 12px;margin:10px 6px 0 0;cursor:pointer}
+  button.sec{background:#e6edff;color:#2f6fdb}
+  #state{color:#2f6fdb;margin-bottom:6px;min-height:15px}
+</style>
+<div id="lib"><div id="tabs"></div><div id="grid"></div></div>
+<div id="form">
+  <h3>Parameters</h3><div id="state"></div><div id="fields"></div>
+  <label><input type="checkbox" id="move" checked> Move neighbouring cabinets when stretching</label><br>
+  <button id="insert">Insert</button><button id="apply" class="sec">Apply to selection</button>
+</div>
+<script>
+const FIELDS=[
+ ['Size',[['width','Width (mm)'],['height','Height (mm)'],['depth','Depth (mm)'],['thickness','Panel thickness'],['toe_kick','Toe kick']]],
+ ['Carcass',[['back','Back panel',['inset','overlay','none']],['back_thickness','Back thickness'],['shelves','Shelves']]],
+ ['Fronts',[['doors','Doors'],['drawers','Drawers'],['drawer_height','Drawer height'],['gap','Reveal / gap'],['hinge','Hinge side (1 door)',['left','right']],['edge_banding','Edge banding',['true','false']]]],
+ ['Handles',[['handle','Handle',['bar','knob','none']],['handle_pos','Position',['top','centre','bottom']],['handle_orient','Orientation',['vertical','horizontal']],['handle_offset','Offset (mm)']]]];
+const Nova={defaults:{},presets:[],cat:'Base',cur:{},
+ init(d){this.defaults=d.defaults;this.presets=d.presets;this.cur={...d.defaults};this.drawForm();this.drawLib();},
+ selected(p){document.getElementById('state').textContent=p?'Editing selected cabinet':'';if(p){this.cur=p;this.drawForm();}},
+ drawLib(){
+  const cats=[...new Set(this.presets.map(p=>p.cat))],t=document.getElementById('tabs');t.innerHTML='';
+  cats.forEach(c=>{const s=document.createElement('span');s.textContent=c;s.className=c==this.cat?'on':'';s.onclick=()=>{this.cat=c;this.drawLib()};t.appendChild(s)});
+  const g=document.getElementById('grid');g.innerHTML='';
+  this.presets.filter(p=>p.cat==this.cat).forEach(pr=>{
+   const c=document.createElement('div');c.className='card';c.innerHTML=thumb({...this.defaults,...pr.p})+'<div>'+pr.name+'</div>';
+   c.onclick=()=>{this.cur={...this.defaults,...pr.p};this.drawForm();[...g.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel')};
+   c.ondblclick=()=>this.insert();g.appendChild(c)});},
+ drawForm(){
+  const f=document.getElementById('fields');f.innerHTML='';
+  FIELDS.forEach(([title,list])=>{f.insertAdjacentHTML('beforeend','<div class="sep">'+title+'</div>');
+   list.forEach(([k,label,opts])=>{const r=document.createElement('div');r.className='row';
+    const v=String(this.cur[k]);
+    r.innerHTML='<label>'+label+'</label>'+(opts?'<select data-k="'+k+'">'+opts.map(o=>'<option'+(o==v?' selected':'')+'>'+o+'</option>').join('')+'</select>'
+      :'<input data-k="'+k+'" value="'+v+'">');f.appendChild(r)})});},
+ read(){const o={...this.cur};document.querySelectorAll('[data-k]').forEach(e=>{const k=e.dataset.k;
+   o[k]=e.tagName=='SELECT'?(e.value=='true'?true:e.value=='false'?false:e.value):parseFloat(e.value)||0;
+   if(['back','hinge','handle','handle_pos','handle_orient'].includes(k))o[k]=e.value});o.type=this.cur.type;return o;},
+ insert(){const s=JSON.stringify(this.read());window.sketchup?sketchup.insert(s):console.log(s)},
+ apply(){const s=JSON.stringify(this.read());window.sketchup?sketchup.apply(s,String(document.getElementById('move').checked)):console.log(s)}};
+function thumb(p){ // front elevation, scaled
+ const W=p.width,H=p.height,k=Math.min(110/W,100/H),w=W*k,h=H*k,x0=(130-w)/2,y0=105-h;
+ let s='<svg viewBox="0 0 130 110"><rect x="'+x0+'" y="'+y0+'" width="'+w+'" height="'+h+'" fill="#e8d9b8" stroke="#555"/>';
+ if(p.type=='panel')return s+'</svg>';
+ const kick=p.toe_kick*k;let top=y0,bot=y0+h-kick;
+ if(kick>0)s+='<rect x="'+(x0+2)+'" y="'+bot+'" width="'+(w-4)+'" height="'+kick+'" fill="#555"/>';
+ const nd=p.doors,dr=p.drawers;let zt=top;
+ if(dr){const dh=nd?p.drawer_height*k:(bot-top)/dr;for(let i=0;i<dr;i++){s+='<rect x="'+(x0+1)+'" y="'+(zt+1)+'" width="'+(w-2)+'" height="'+(dh-2)+'" fill="#f4ead3" stroke="#555"/><rect x="'+(x0+w/2-6)+'" y="'+(zt+dh/2-1)+'" width="12" height="2" fill="#333"/>';zt+=dh}}
+ for(let j=0;j<nd;j++){const dw=w/nd;s+='<rect x="'+(x0+j*dw+1)+'" y="'+(zt+1)+'" width="'+(dw-2)+'" height="'+(bot-zt-2)+'" fill="#f4ead3" stroke="#555"/>'}
+ return s+'</svg>';}
+document.getElementById('insert').onclick=()=>Nova.insert();document.getElementById('apply').onclick=()=>Nova.apply();
+window.addEventListener('load',()=>{if(window.sketchup)sketchup.ready()});
+</script>

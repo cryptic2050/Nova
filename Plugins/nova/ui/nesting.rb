@@ -13,13 +13,13 @@ module Nova
         @dlg.visible? ? @dlg.bring_to_front : @dlg.show
       end
 
-      # Collect panels carrying a Nova material attribute into sheets (placeholder packer).
+      # Every panel (carcass, doors, backs ...) becomes a part to nest.
       def self.sheets
-        parts = Sketchup.active_model.active_entities.select do |e|
-          (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance))
-        end.map do |e|
-          dims = [e.bounds.width, e.bounds.height, e.bounds.depth].map { |v| v.to_mm.round(1) }.sort
-          { name: e.name.to_s, w: dims[2], h: dims[1], t: dims[0], material: (e.material&.name || 'Default') }
+        parts = []
+        Cabinet.each_panel do |e, _tr|
+          dims = e.get_attribute(Cabinet::DICT, 'dims').to_s.split('x').map(&:to_f)
+          next unless dims.size == 3
+          parts << { name: e.name, w: dims[0], h: dims[1], t: dims[2], material: e.get_attribute(Cabinet::DICT, 'material').to_s }
         end
         { board: [2440, 1300], parts: parts }
       end

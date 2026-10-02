@@ -1,0 +1,31 @@
+<!doctype html><meta charset="utf-8"><title>Nova Pre-flight Check</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;font:12px "Segoe UI",sans-serif;display:flex;flex-direction:column;height:100vh;color:#222}
+  #bar{padding:8px;background:#f1f1f1;border-bottom:1px solid #ccc;display:flex;gap:8px;align-items:center}
+  button{background:#2f6fdb;color:#fff;border:0;border-radius:4px;padding:6px 12px;cursor:pointer}
+  #sum{margin-left:auto;color:#555}
+  #list{flex:1;overflow:auto}
+  .grp{padding:6px 10px;background:#eef1f6;font-weight:600;color:#c00;border-bottom:1px solid #dde}
+  .row{display:flex;align-items:center;padding:6px 10px 6px 26px;border-bottom:1px solid #eee;cursor:pointer}
+  .row:hover{background:#f3f7ff}.row .m{flex:1}.row small{display:block;color:#777}
+  .b{color:#fff;font-weight:700;padding:3px 10px;border-radius:3px;min-width:62px;text-align:center}
+  .Error{background:#ff3b14}.Warning{background:#19c43a}
+  #ok{padding:30px;text-align:center;color:#19a02f;font-size:14px}
+</style>
+<div id="bar"><button id="re">Run check</button><button id="ind">Mark panels in model</button><span id="sum"></span></div>
+<div id="list"></div>
+<script>
+const Nova={load(items){
+  const l=document.getElementById('list');l.innerHTML='';
+  document.getElementById('sum').textContent=items.filter(i=>i.level=='Error').length+' errors, '+items.filter(i=>i.level=='Warning').length+' warnings';
+  if(!items.length){l.innerHTML='<div id="ok">✔ No problems found</div>';return}
+  const groups={};items.forEach(i=>(groups[i.type]=groups[i.type]||[]).push(i));
+  Object.entries(groups).forEach(([t,list])=>{
+   l.insertAdjacentHTML('beforeend','<div class="grp">▾ '+t+'</div>');
+   list.forEach(i=>{const r=document.createElement('div');r.className='row';
+    r.innerHTML='<div class="m">'+i.panel+' <small>'+i.cabinet+' — '+i.message+'</small></div><div class="b '+i.level+'">'+i.level+'</div>';
+    r.onclick=()=>window.sketchup&&sketchup.select(i.cid);l.appendChild(r)})});}};
+document.getElementById('re').onclick=()=>window.sketchup&&sketchup.rerun();
+document.getElementById('ind').onclick=()=>window.sketchup&&sketchup.indicators();
+window.addEventListener('load',()=>{if(window.sketchup)sketchup.ready()});
+</script>

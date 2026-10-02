@@ -3,12 +3,14 @@ require 'json'
 module Nova
   # id => [tooltip, icon file (without extension)]
   COMMANDS = {
-    grain:   ['Grain matching',        'grain'],
-    door:    ['Open / close doors',    'door'],
-    quick:   ['Quick toolbar (radial)', 'quick'],
-    nesting: ['Nesting layout',        'nesting'],
-    settings:['Settings',              'settings'],
-    check:   ['Check model',           'check']
+    cabinets:  ['Cabinet library & parameters', 'cabinets'],
+    grain:     ['Grain matching',               'grain'],
+    door:      ['Open / close doors',           'door'],
+    labels:    ['Labels & QR codes',            'labels'],
+    preflight: ['Pre-flight check',             'preflight'],
+    nesting:   ['Nesting layout',               'nesting'],
+    quick:     ['Quick toolbar (radial)',       'quick'],
+    settings:  ['Settings',                     'settings']
   }.freeze
 
   def self.icon(name)
@@ -17,12 +19,14 @@ module Nova
 
   def self.run(id)
     case id
-    when :grain   then Sketchup.active_model.select_tool(Tools::GrainMatch.new)
-    when :door    then Sketchup.active_model.select_tool(Tools::DoorToggle.new)
-    when :quick   then UI::QuickToolbar.show
-    when :nesting then UI::Nesting.show
-    when :settings, :check
-      ::UI.messagebox("#{COMMANDS[id][0]}: not implemented yet.")
+    when :cabinets  then UI::Cabinets.show
+    when :grain     then Sketchup.active_model.select_tool(Tools::GrainMatch.new)
+    when :door      then Sketchup.active_model.select_tool(Tools::DoorToggle.new)
+    when :labels    then UI::Labels.show
+    when :preflight then UI::Preflight.show
+    when :nesting   then UI::Nesting.show
+    when :quick     then UI::QuickToolbar.show
+    when :settings  then ::UI.messagebox("#{COMMANDS[id][0]}: not implemented yet.")
     end
   end
 
@@ -38,15 +42,18 @@ module Nova
     end
   end
 
+  require File.join(PLUGIN_ROOT, 'cabinet')
+  require File.join(PLUGIN_ROOT, 'checker')
   require File.join(PLUGIN_ROOT, 'tools', 'grain_match')
   require File.join(PLUGIN_ROOT, 'tools', 'door_toggle')
+  require File.join(PLUGIN_ROOT, 'tools', 'indicators')
   require File.join(PLUGIN_ROOT, 'ui', 'quick_toolbar')
   require File.join(PLUGIN_ROOT, 'ui', 'nesting')
+  require File.join(PLUGIN_ROOT, 'ui', 'cabinets')
 
   unless file_loaded?(__FILE__)
-    # Two rows, like the reference: main tools on top, panel tools below.
-    [['Nova', %i[settings nesting grain door check]],
-     ['Nova Quick', %i[quick]]].each do |name, ids|
+    [['Nova', %i[settings cabinets nesting labels preflight]],
+     ['Nova Tools', %i[grain door quick]]].each do |name, ids|
       tb = ::UI::Toolbar.new(name)
       ids.each { |i| tb.add_item(command(i)) }
       tb.show

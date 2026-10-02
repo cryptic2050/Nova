@@ -4,13 +4,13 @@ module Nova
     # blue with a red dashed outline and labelled A1, A2, B1 ... per cabinet.
     # Space exits, right-click confirms.
     class GrainMatch
-      MAX_PANEL_THICKNESS = 50.mm
       PURPLE = Sketchup::Color.new(120, 30, 190)
       BLUE   = Sketchup::Color.new(60, 110, 200, 200)
       RED    = Sketchup::Color.new(220, 40, 40)
       STATUS = 'Pick the panel or part'.freeze
 
       def activate
+        @tr = {}
         @picked = []
         @hover = nil
         Sketchup.status_text = STATUS
@@ -65,26 +65,28 @@ module Nova
       private
 
       def panels
-        @panels ||= Sketchup.active_model.active_entities.select { |e| panel?(e) }
-      end
-
-      def panel?(e)
-        return false unless e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
-        b = e.bounds
-        [b.width, b.height, b.depth].min <= MAX_PANEL_THICKNESS
+        @panels ||= begin
+          list = []
+          Cabinet.each_panel { |e, tr| list << e; @tr[e] = tr }
+          list
+        end
       end
 
       def panel_at(view, x, y)
         ph = view.pick_helper
         ph.do_pick(x, y)
-        ph.all_picked.find { |e| panel?(e) }
+        panels
+        ph.count.times do |i|
+          ph.path_at(i).reverse_each { |e| return e if @tr.key?(e) }
+        end
+        nil
       end
 
-      # Front-most bounding-box face as seen from the camera.
       def face_points(view, ent)
         b = ent.bounds
         axis = [b.width, b.height, b.depth].each_with_index.min[1]
-        eye = view.camera.eye
+        tr = @tr[ent]
+        eye = tr.inverse * view.camera.eye
         pts = case axis
               when 0 then x = (eye.x > b.center.x ? b.max.x : b.min.x)
                           [[x, b.min.y, b.min.z], [x, b.max.y, b.min.z], [x, b.max.y, b.max.z], [x, b.min.y, b.max.z]]
@@ -93,7 +95,7 @@ module Nova
               else        z = (eye.z > b.center.z ? b.max.z : b.min.z)
                           [[b.min.x, b.min.y, z], [b.max.x, b.min.y, z], [b.max.x, b.max.y, z], [b.min.x, b.max.y, z]]
               end
-        pts.map { |a| Geom::Point3d.new(*a) }
+        pts.map { |a| tr * Geom::Point3d.new(*a) }
       end
 
       def draw_panel(view, ent, color, outline)
@@ -116,7 +118,7 @@ module Nova
       def draw_labels(view)
         opts = { color: PURPLE, size: 14, bold: false }
         @picked.each do |p|
-          c = view.screen_coords(p.bounds.center)
+          c = view.screen_coords(@tr[p] * p.bounds.center)
           view.draw_text(Geom::Point3d.new(c.x - 8, c.y - 8, 0), label_for(p), opts)
         end
       end
