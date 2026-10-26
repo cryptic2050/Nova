@@ -25,11 +25,13 @@
   <button id="insert">Insert</button><button id="apply" class="sec">Apply to selection</button>
 </div>
 <script>
+const MATS=['MATTE WHITE CHIPBOARD','HG COOL GREY','Tuscan Oak'],EDGES=['MATTE WHITE EDGE BAND','HG COOL GREY EDGE BAND'];
 const FIELDS=[
  ['Size',[['width','Width (mm)'],['height','Height (mm)'],['depth','Depth (mm)'],['thickness','Panel thickness'],['toe_kick','Toe kick']]],
- ['Carcass',[['back','Back panel',['inset','overlay','none']],['back_thickness','Back thickness'],['shelves','Shelves']]],
+ ['Carcass',[['toe','Toe kick',['legs','plinth','none']],['back','Back panel',['inset','overlay','none']],['back_thickness','Back thickness'],['shelves','Shelves']]],
  ['Fronts',[['doors','Doors'],['drawers','Drawers'],['drawer_height','Drawer height'],['gap','Reveal / gap'],['hinge','Hinge side (1 door)',['left','right']],['edge_banding','Edge banding',['true','false']]]],
- ['Handles',[['handle','Handle',['bar','knob','none']],['handle_pos','Position',['top','centre','bottom']],['handle_orient','Orientation',['vertical','horizontal']],['handle_offset','Offset (mm)']]]];
+ ['Materials',[['carcass_material','Carcass board',MATS],['carcass_edge','Carcass edge',EDGES],['door_material','Door board',MATS],['door_edge','Door edge',EDGES]]],
+ ['Handles',[['handle','Handle',['profile','bar','knob','none']],['handle_pos','Position',['top','centre','bottom']],['handle_orient','Orientation',['vertical','horizontal']],['handle_offset','Offset (mm)']]]];
 const Nova={defaults:{},presets:[],cat:'Base',cur:{},
  init(d){this.defaults=d.defaults;this.presets=d.presets;this.cur={...d.defaults};this.drawForm();this.drawLib();},
  selected(p){document.getElementById('state').textContent=p?'Editing selected cabinet':'';if(p){this.cur=p;this.drawForm();}},

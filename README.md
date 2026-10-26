@@ -15,6 +15,11 @@ Install: copy `Plugins/nova.rb` and `Plugins/nova/` into your SketchUp `Plugins`
 - **Labels & QR** – label sheet per panel (A1, A2 ...) with a QR payload (needs internet for the QR library).
 - **Grain matching, door open/close, QuickToolBar, nesting layout** – see the toolbar.
 
+Cabinets follow the modelling conventions of the reference `60cm Single door cabinet.skp`: each part is a shared
+component (`side panel`, `base panel`, `brace`, `shelf`, `60CM DOOR`, `60CM CABINET BACKBOARD`, `profile handle single`,
+`KITCHEN LEG`), painted with the same material names (MATTE WHITE CHIPBOARD, MATTE WHITE EDGE BAND, BACK PANEL,
+U PROFILE HANDLE, Kitchen Legs ...), with edge-band material on the banded faces.
+
 `Plugins/nova/cabinet.rb` and `checker.rb` are plain Ruby (no SketchUp calls in the panel/check logic).
 
 Not implemented yet: room-space recognition, mortise/slot machining, per-panel fine tuning,
