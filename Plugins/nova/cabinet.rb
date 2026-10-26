@@ -1,4 +1,5 @@
 require 'json'
+require 'securerandom'
 
 module Nova
   # Parametric cabinet model. `panels` is pure Ruby (mm, no SketchUp calls) so it can be
@@ -23,8 +24,20 @@ module Nova
       'MATTE WHITE CHIPBOARD' => [209, 209, 209], 'MATTE WHITE EDGE BAND' => [255, 255, 255],
       'HG COOL GREY' => [94, 94, 94], 'HG COOL GREY EDGE BAND' => [117, 117, 117],
       'BACK PANEL' => [247, 221, 176], 'U PROFILE HANDLE' => [63, 63, 63],
-      'Kitchen Legs' => [0, 194, 224], 'Tuscan Oak' => [219, 190, 157]
+      'Kitchen Legs' => [0, 194, 224], 'Tuscan Oak' => [219, 190, 157], 'Hinge' => [140, 140, 140]
     }.freeze
+
+    # OpenCutList material types (dictionary 'ladb_opencutlist' on the material).
+    OCL_DICT = 'ladb_opencutlist'.freeze
+    OCL_SHEET = 2
+    OCL_EDGE = 4
+    OCL_HARDWARE = 5
+    OCL_MATERIAL_TYPES = {
+      'MATTE WHITE CHIPBOARD' => OCL_SHEET, 'HG COOL GREY' => OCL_SHEET, 'Tuscan Oak' => OCL_SHEET,
+      'BACK PANEL' => OCL_SHEET, 'MATTE WHITE EDGE BAND' => OCL_EDGE, 'HG COOL GREY EDGE BAND' => OCL_EDGE,
+      'U PROFILE HANDLE' => OCL_HARDWARE, 'Kitchen Legs' => OCL_HARDWARE, 'Hinge' => OCL_HARDWARE
+    }.freeze
+    OCL_GRAINED = ['Tuscan Oak'].freeze
     NUMERIC = %i[width height depth thickness toe_kick back_thickness drawer_height gap handle_offset].freeze
     INTEGER = %i[shelves doors drawers].freeze
 
@@ -145,7 +158,7 @@ module Nova
         count.times do |k|
           z = k == 0 ? z0 + 100 : (k == count - 1 ? z1 - 135 : (z0 + z1) / 2 - 17.5)
           hx = hinge == 'left' ? x + 5 : x + dw - 40
-          out << part("Hinge #{j + 1}-#{k + 1}", 'hinge', hx, -13, z, 35, 13, 35, def: 'hinge cup', material: 'HG COOL GREY', grain: 'none')
+          out << part("Hinge #{j + 1}-#{k + 1}", 'hinge', hx, -13, z, 35, 13, 35, def: 'hinge cup', material: 'Hinge', grain: 'none')
         end
       end
       out
@@ -192,7 +205,41 @@ module Nova
 
     def self.material(name)
       mats = Sketchup.active_model.materials
-      mats[name] || mats.add(name).tap { |m| m.color = Sketchup::Color.new(*(MATERIALS[name] || [200, 200, 200])) }
+      mats[name] || mats.add(name).tap do |m|
+        m.color = Sketchup::Color.new(*(MATERIALS[name] || [200, 200, 200]))
+        ocl_material(m, name)
+      end
+    end
+
+    # Tell OpenCutList what kind of material this is, so boards, edge bands and hardware
+    # are classified without the user having to set each material up by hand.
+    def self.ocl_material(mat, name)
+      type = OCL_MATERIAL_TYPES[name]
+      return unless type
+      mat.set_attribute(OCL_DICT, 'type', type)
+      mat.set_attribute(OCL_DICT, 'length_increase', '0')
+      mat.set_attribute(OCL_DICT, 'width_increase', '0')
+      mat.set_attribute(OCL_DICT, 'thickness_increase', '0')
+      return unless type == OCL_SHEET
+      mat.set_attribute(OCL_DICT, 'std_thicknesses', '18mm;6mm')
+      mat.set_attribute(OCL_DICT, 'std_sizes', '2440x1220')
+      mat.set_attribute(OCL_DICT, 'grained', OCL_GRAINED.include?(name))
+    end
+
+    # Same attribute set OpenCutList writes on a part's component definition.
+    def self.ocl_definition(defn, pn)
+      d = defn
+      d.set_attribute(OCL_DICT, 'uuid', SecureRandom.uuid)
+      %w[length_increase width_increase thickness_increase].each { |k| d.set_attribute(OCL_DICT, k, '0') }
+      d.set_attribute(OCL_DICT, 'thickness_layer_count', 1)
+      d.set_attribute(OCL_DICT, 'mass', '')
+      d.set_attribute(OCL_DICT, 'cumulable', 0)
+      d.set_attribute(OCL_DICT, 'instance_count_by_part', 1)
+      d.set_attribute(OCL_DICT, 'orientation_locked_on_axis', false)
+      d.set_attribute(OCL_DICT, 'symmetrical', false)
+      d.set_attribute(OCL_DICT, 'ignore_grain_direction', pn[:grain] == 'none')
+      d.set_attribute(OCL_DICT, 'tags', [])
+      d.set_attribute(OCL_DICT, 'numbers', '{}')
     end
 
     # One shared component definition per distinct part (name, size, material, edging),
@@ -205,6 +252,7 @@ module Nova
       return found if found
       defn = model.definitions.add(pn[:def])
       defn.set_attribute(DICT, 'key', key)
+      ocl_definition(defn, pn)
       pts = [[0, 0], [pn[:w], 0], [pn[:w], pn[:d]], [0, pn[:d]]].map { |a, b| Geom::Point3d.new(a.mm, b.mm, 0) }
       f = defn.entities.add_face(pts)
       f.reverse! if f.normal.z < 0
